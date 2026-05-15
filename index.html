@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RMG Template Reviewer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --line: #d9dee7;
+      --text: #17202c;
+      --muted: #687385;
+      --accent: #2563eb;
+      --spawn: #2f7d32;
+      --city: #f8fafc;
+      --treasure: #7c3aed;
+      --connector: #475569;
+      --gold: #b88700;
+      --danger: #b91c1c;
+      --badge-border: rgba(17, 24, 39, 0.32);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    .build-stamp {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .file-label, button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+
+    button.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #eff6ff;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    input[type="search"], select {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 10px;
+      background: #fff;
+      min-width: 160px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(520px, 1fr) 420px;
+      gap: 14px;
+      padding: 14px;
+      min-height: calc(100vh - 62px);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-width: 0;
+    }
+
+    .graph-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      font-weight: 700;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(92px, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fff;
+      min-height: 58px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 18px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    #graphWrap {
+      min-height: 760px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background:
+        linear-gradient(#eef1f5 1px, transparent 1px),
+        linear-gradient(90deg, #eef1f5 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    .edge {
+      stroke: #8a94a6;
+      stroke-width: 2;
+      fill: none;
+      opacity: 0.82;
+    }
+
+    .edge.road { stroke: #3b82f6; stroke-width: 3; }
+    .edge.no-road { stroke: #9ca3af; stroke-dasharray: 6 5; }
+    .edge.direct { stroke: #e11d48; stroke-width: 3; }
+    .edge.selected { stroke: #111827; stroke-width: 5; opacity: 1; }
+    .edge.related { stroke-width: 4; opacity: 1; }
+    .edge.muted { opacity: 0.12; }
+
+    .guard-label {
+      pointer-events: none;
+      fill: #b91c1c;
+      font-size: 10px;
+      font-weight: 800;
+      text-anchor: middle;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+
+    .node circle {
+      stroke: #fff;
+      stroke-width: 2.5;
+      cursor: pointer;
+    }
+
+    .node .light-node {
+      stroke: #64748b;
+      stroke-width: 2;
+    }
+
+    .node text {
+      pointer-events: none;
+      fill: #101827;
+      font-size: 12px;
+      font-weight: 700;
+      text-anchor: middle;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+
+    .node .player-dot {
+      stroke: var(--badge-border);
+      stroke-width: 1.5;
+      cursor: pointer;
+    }
+
+    .node .player-label {
+      fill: #111827;
+      font-size: 10px;
+      font-weight: 800;
+      stroke: none;
+    }
+
+    .node .castle-marker {
+      pointer-events: none;
+      fill: #111827;
+      font-size: 15px;
+      font-weight: 900;
+      text-anchor: middle;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+
+    .node.selected circle {
+      stroke: #111827;
+      stroke-width: 4;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .graph-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .graph-tools select {
+      min-width: 132px;
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: -1px;
+    }
+
+    .side {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .details {
+      padding: 12px;
+    }
+
+    .details h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 145px 1fr;
+      gap: 6px 10px;
+      margin: 8px 0;
+    }
+
+    .kv dt {
+      color: var(--muted);
+    }
+
+    .kv dd {
+      margin: 0;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table-wrap {
+      max-height: 44vh;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #edf0f4;
+      padding: 7px 8px;
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      z-index: 1;
+      color: #384252;
+      font-weight: 700;
+    }
+
+    tr:hover td {
+      background: #f8fbff;
+    }
+
+    .pill {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 12px;
+      color: #344054;
+      background: #fff;
+    }
+
+    .player-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .player-chip {
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 1px solid var(--badge-border);
+      vertical-align: -2px;
+    }
+
+    .empty {
+      padding: 32px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .drop {
+      outline: 3px solid #93c5fd;
+      outline-offset: -6px;
+    }
+
+    @media (max-width: 1080px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      .summary {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      #graphWrap {
+        min-height: 760px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RMG Template Reviewer <span class="build-stamp">codex 17:36</span></h1>
+    <div class="toolbar">
+      <label class="file-label">
+        Load .rmg.json
+        <input id="fileInput" type="file" accept=".json,.rmg.json,application/json">
+      </label>
+      <select id="variantSelect" disabled></select>
+      <input id="searchInput" type="search" placeholder="Filter zones/connections" disabled>
+      <button id="fitButton" type="button" disabled>Fit</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <section class="panel graph-panel">
+      <div class="summary" id="summary">
+        <div class="metric"><strong>-</strong><span>zones</span></div>
+        <div class="metric"><strong>-</strong><span>connections</span></div>
+        <div class="metric"><strong>-</strong><span>spawns</span></div>
+        <div class="metric"><strong>-</strong><span>cities</span></div>
+        <div class="metric"><strong>-</strong><span>road links</span></div>
+        <div class="metric"><strong>-</strong><span>direct links</span></div>
+      </div>
+      <div class="panel-head">
+        <div class="panel-title" id="graphTitle">No template loaded</div>
+        <div class="graph-tools">
+          <select id="edgeModeSelect" disabled>
+            <option value="all">All connections</option>
+            <option value="selected">Selected zone</option>
+            <option value="roads">Roads only</option>
+            <option value="guarded">Guarded only</option>
+            <option value="direct">Direct only</option>
+            <option value="noroad">No-road only</option>
+          </select>
+          <button id="clearSelectionButton" type="button" disabled>Clear</button>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--spawn)"></i>Spawn</span>
+          <span><i class="swatch" style="background:var(--city);border:1px solid var(--line)"></i>City</span>
+            <span><i class="swatch" style="background:var(--gold)"></i>High value</span>
+            <span><i class="swatch" style="background:var(--connector)"></i>Other</span>
+          </div>
+        </div>
+      </div>
+      <div id="graphWrap">
+        <div class="empty">Load an Olden Era <code>.rmg.json</code> file or drop one here.</div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Selection</div>
+        </div>
+        <div class="details" id="details">
+          <div class="empty">Select a zone or connection.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="tabs">
+          <button id="zonesTab" class="active" type="button">Zones</button>
+          <button id="connectionsTab" type="button">Connections</button>
+        </div>
+        <div class="table-wrap" id="tableWrap">
+          <div class="empty">No data loaded.</div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const PLAYER_COLORS = {
+      Player1: { name: "Red", color: "#dc2626", label: "1" },
+      Player2: { name: "Blue", color: "#2563eb", label: "2" },
+      Player3: { name: "Orange", color: "#f97316", label: "3" },
+      Player4: { name: "Green", color: "#16a34a", label: "4" },
+      Player5: { name: "Violet", color: "#7c3aed", label: "5" },
+      Player6: { name: "Cyan", color: "#0891b2", label: "6" },
+      Player7: { name: "Yellow", color: "#eab308", label: "7" },
+      Player8: { name: "Pink", color: "#db2777", label: "8" }
+    };
+
+    const state = {
+      template: null,
+      variantIndex: 0,
+      graph: null,
+      selected: null,
+      table: "zones",
+      search: "",
+      edgeMode: "all"
+    };
+
+    const els = {
+      app: document.getElementById("app"),
+      fileInput: document.getElementById("fileInput"),
+      variantSelect: document.getElementById("variantSelect"),
+      edgeModeSelect: document.getElementById("edgeModeSelect"),
+      clearSelectionButton: document.getElementById("clearSelectionButton"),
+      searchInput: document.getElementById("searchInput"),
+      fitButton: document.getElementById("fitButton"),
+      summary: document.getElementById("summary"),
+      graphTitle: document.getElementById("graphTitle"),
+      graphWrap: document.getElementById("graphWrap"),
+      details: document.getElementById("details"),
+      zonesTab: document.getElementById("zonesTab"),
+      connectionsTab: document.getElementById("connectionsTab"),
+      tableWrap: document.getElementById("tableWrap")
+    };
+
+    els.fileInput.addEventListener("change", event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) loadFile(file);
+    });
+
+    els.variantSelect.addEventListener("change", () => {
+      state.variantIndex = Number(els.variantSelect.value);
+      rebuild();
+    });
+
+    els.edgeModeSelect.addEventListener("change", () => {
+      state.edgeMode = els.edgeModeSelect.value;
+      renderGraph();
+    });
+
+    els.clearSelectionButton.addEventListener("click", () => clearSelection());
+
+    els.searchInput.addEventListener("input", () => {
+      state.search = els.searchInput.value.trim().toLowerCase();
+      renderGraph();
+      renderTable();
+    });
+
+    els.fitButton.addEventListener("click", () => {
+      if (state.graph) {
+        layoutGraph(state.graph, true);
+        renderGraph();
+      }
+    });
+
+    els.zonesTab.addEventListener("click", () => {
+      state.table = "zones";
+      els.zonesTab.classList.add("active");
+      els.connectionsTab.classList.remove("active");
+      renderTable();
+    });
+
+    els.connectionsTab.addEventListener("click", () => {
+      state.table = "connections";
+      els.connectionsTab.classList.add("active");
+      els.zonesTab.classList.remove("active");
+      renderTable();
+    });
+
+    for (const eventName of ["dragenter", "dragover"]) {
+      document.addEventListener(eventName, event => {
+        event.preventDefault();
+        els.app.classList.add("drop");
+      });
+    }
+
+    for (const eventName of ["dragleave", "drop"]) {
+      document.addEventListener(eventName, event => {
+        event.preventDefault();
+        els.app.classList.remove("drop");
+      });
+    }
+
+    document.addEventListener("drop", event => {
+      const file = event.dataTransfer.files && event.dataTransfer.files[0];
+      if (file) loadFile(file);
+    });
+
+    async function loadFile(file) {
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data.variants)) {
+          throw new Error("Expected an Olden Era template with a variants array.");
+        }
+        state.template = data;
+        state.variantIndex = 0;
+        state.selected = null;
+        state.search = "";
+        els.searchInput.value = "";
+        els.variantSelect.innerHTML = data.variants
+          .map((_, index) => `<option value="${index}">Variant ${index + 1}</option>`)
+          .join("");
+        els.variantSelect.disabled = data.variants.length <= 1;
+        els.edgeModeSelect.disabled = false;
+        els.clearSelectionButton.disabled = false;
+        els.searchInput.disabled = false;
+        els.fitButton.disabled = false;
+        rebuild();
+      } catch (error) {
+        els.graphWrap.innerHTML = `<div class="empty">Could not load template: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function rebuild() {
+      const variant = currentVariant();
+      state.graph = buildGraph(variant);
+      layoutGraph(state.graph, true);
+      renderSummary();
+      renderGraph();
+      renderDetails();
+      renderTable();
+    }
+
+    function currentVariant() {
+      return state.template.variants[state.variantIndex] || { zones: [], connections: [] };
+    }
+
+    function buildGraph(variant) {
+      const zones = (variant.zones || []).map(zone => ({
+        raw: zone,
+        id: zone.name,
+        label: shortZoneName(zone.name),
+        role: zoneRole(zone),
+        player: zonePlayer(zone),
+        size: Number(zone.size || 1),
+        radius: zoneRadius(zone),
+        value: Number(zone.guardedContentValue || 0) + Number(zone.unguardedContentValue || 0),
+        x: 0,
+        y: 0
+      }));
+      const byId = new Map(zones.map(zone => [zone.id, zone]));
+      const links = (variant.connections || [])
+        .filter(conn => byId.has(conn.from) && byId.has(conn.to))
+        .map((conn, index) => ({
+          raw: conn,
+          id: conn.name || `${conn.from}-${conn.to}-${index}`,
+          index,
+          from: byId.get(conn.from),
+          to: byId.get(conn.to),
+          guardValue: Number(conn.guardValue || 0),
+          road: conn.road,
+          type: conn.connectionType || "Default"
+        }));
+      return { zones, links };
+    }
+
+    function zonePlayer(zone) {
+      const spawn = (zone.mainObjects || []).find(obj => obj.type === "Spawn" && obj.spawn);
+      return spawn ? spawn.spawn : "";
+    }
+
+    function zoneRole(zone) {
+      const main = zone.mainObjects || [];
+      if (main.some(obj => obj.type === "Spawn")) return "spawn";
+      if (main.some(obj => obj.type === "City")) return "city";
+      if (Number(zone.guardedContentValue || 0) >= 200000) return "gold";
+      if ((zone.layout || "").toLowerCase().includes("side") || /(?:^|[-_ ])(?:21|22|23|24|25)$/i.test(zone.name)) return "connector";
+      return "other";
+    }
+
+    function zoneRadius(zone) {
+      const role = zoneRole(zone);
+      const radius = Math.max(18, Math.min(34, 18 + Number(zone.size || 1) * 7));
+      return role === "spawn" ? Math.max(30, radius) : radius;
+    }
+
+    function layoutGraph(graph, reset) {
+      const width = Math.max(640, els.graphWrap.clientWidth || 900);
+      const height = Math.max(520, els.graphWrap.clientHeight || 620);
+      if (reset && apply6lm10aLayout(graph, width, height)) return;
+      const count = Math.max(1, graph.zones.length);
+      if (reset) {
+        graph.zones.forEach((zone, index) => {
+          const ring = zone.role === "spawn" ? 0.42 : zone.role === "gold" ? 0.16 : zone.role === "connector" ? 0.28 : 0.34;
+          const angle = (Math.PI * 2 * index) / count;
+          zone.x = width / 2 + Math.cos(angle) * width * ring;
+          zone.y = height / 2 + Math.sin(angle) * height * ring;
+        });
+      }
+
+      for (let step = 0; step < 260; step++) {
+        for (let i = 0; i < graph.zones.length; i++) {
+          for (let j = i + 1; j < graph.zones.length; j++) {
+            const a = graph.zones[i];
+            const b = graph.zones[j];
+            const dx = a.x - b.x || 0.01;
+            const dy = a.y - b.y || 0.01;
+            const dist2 = dx * dx + dy * dy;
+            const force = 6500 / Math.max(80, dist2);
+            const fx = dx * force;
+            const fy = dy * force;
+            a.x += fx;
+            a.y += fy;
+            b.x -= fx;
+            b.y -= fy;
+          }
+        }
+        for (const link of graph.links) {
+          const dx = link.to.x - link.from.x;
+          const dy = link.to.y - link.from.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const target = link.type === "Direct" ? 120 : 170;
+          const force = (dist - target) * 0.012;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          link.from.x += fx;
+          link.from.y += fy;
+          link.to.x -= fx;
+          link.to.y -= fy;
+        }
+        separateOverlappingNodes(graph.zones);
+        for (const zone of graph.zones) {
+          zone.x += (width / 2 - zone.x) * 0.008;
+          zone.y += (height / 2 - zone.y) * 0.008;
+          const margin = zone.radius + (zone.player ? 18 : 8);
+          zone.x = Math.max(margin, Math.min(width - margin, zone.x));
+          zone.y = Math.max(margin, Math.min(height - margin, zone.y));
+        }
+      }
+      relaxNodeCollisions(graph.zones, width, height, 120);
+    }
+
+    function apply6lm10aLayout(graph, width, height) {
+      const ids = new Set(graph.zones.map(zone => zone.id));
+      const required = Array.from({ length: 25 }, (_, index) => `Zone-${String(index + 1).padStart(2, "0")}`);
+      if (!required.every(id => ids.has(id))) return false;
+
+      const positions = {
+        "Zone-15": [0.05, 0.08],
+        "Zone-24": [0.17, 0.08],
+        "Zone-03": [0.32, 0.18],
+        "Zone-13": [0.32, 0.34],
+        "Zone-05": [0.20, 0.42],
+        "Zone-11": [0.08, 0.48],
+        "Zone-17": [0.08, 0.72],
+        "Zone-07": [0.08, 0.92],
+        "Zone-19": [0.20, 0.62],
+        "Zone-01": [0.32, 0.76],
+        "Zone-21": [0.17, 0.88],
+        "Zone-23": [0.50, 0.50],
+        "Zone-09": [0.42, 0.64],
+        "Zone-10": [0.58, 0.64],
+        "Zone-06": [0.68, 0.18],
+        "Zone-14": [0.68, 0.34],
+        "Zone-04": [0.80, 0.42],
+        "Zone-12": [0.92, 0.48],
+        "Zone-18": [0.92, 0.72],
+        "Zone-20": [0.92, 0.92],
+        "Zone-16": [0.95, 0.08],
+        "Zone-25": [0.83, 0.08],
+        "Zone-02": [0.68, 0.76],
+        "Zone-22": [0.83, 0.88],
+        "Zone-08": [0.58, 0.88]
+      };
+      for (const zone of graph.zones) {
+        const pos = positions[zone.id];
+        if (!pos) continue;
+        zone.x = width * pos[0];
+        zone.y = height * pos[1];
+      }
+      return true;
+    }
+
+    function separateOverlappingNodes(zones) {
+      for (let i = 0; i < zones.length; i++) {
+        for (let j = i + 1; j < zones.length; j++) {
+          const a = zones[i];
+          const b = zones[j];
+          const dx = b.x - a.x || 0.01;
+          const dy = b.y - a.y || 0.01;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const minDist = a.radius + b.radius + 34;
+          if (dist >= minDist) continue;
+          const push = (minDist - dist) * 0.5;
+          const px = (dx / dist) * push;
+          const py = (dy / dist) * push;
+          a.x -= px;
+          a.y -= py;
+          b.x += px;
+          b.y += py;
+        }
+      }
+    }
+
+    function relaxNodeCollisions(zones, width, height, iterations) {
+      for (let step = 0; step < iterations; step++) {
+        separateOverlappingNodes(zones);
+        for (const zone of zones) {
+          const margin = zone.radius + 18;
+          zone.x = Math.max(margin, Math.min(width - margin, zone.x));
+          zone.y = Math.max(margin, Math.min(height - margin, zone.y));
+        }
+      }
+    }
+
+    function renderSummary() {
+      const graph = state.graph;
+      const zones = graph.zones;
+      const links = graph.links;
+      const metrics = [
+        [zones.length, "zones"],
+        [links.length, "connections"],
+        [zones.filter(z => z.role === "spawn").length, "spawns"],
+        [zones.filter(z => z.role === "city").length, "cities"],
+        [links.filter(l => l.road === true).length, "road links"],
+        [links.filter(l => l.type === "Direct").length, "direct links"]
+      ];
+      els.summary.innerHTML = metrics
+        .map(([value, label]) => `<div class="metric"><strong>${value}</strong><span>${label}</span></div>`)
+        .join("");
+      els.graphTitle.textContent = `${state.template.name || "Unnamed template"} - ${state.template.sizeX || "?"}x${state.template.sizeZ || "?"}`;
+    }
+
+    function renderGraph() {
+      if (!state.graph) return;
+      const width = Math.max(640, els.graphWrap.clientWidth || 900);
+      const height = Math.max(520, els.graphWrap.clientHeight || 620);
+      const q = state.search;
+      const nodeVisible = zone => !q || JSON.stringify(zone.raw).toLowerCase().includes(q);
+      const linkVisible = link => (!q || JSON.stringify(link.raw).toLowerCase().includes(q)) && edgeModeMatches(link);
+      const selectedId = state.selected && state.selected.id;
+      const edges = state.graph.links
+        .filter(linkVisible)
+        .map(link => {
+          const related = isLinkRelatedToSelection(link);
+          const cls = [
+            "edge",
+            link.road === true ? "road" : "",
+            link.road === false ? "no-road" : "",
+            link.type === "Direct" ? "direct" : "",
+            selectedId === link.id ? "selected" : "",
+            related ? "related" : "",
+            selectedId && !related && selectedId !== link.id ? "muted" : ""
+          ].filter(Boolean).join(" ");
+          return `<path class="${cls}" d="${edgePath(link)}" data-link="${escapeAttr(link.id)}"><title>${escapeHtml(link.id)} guard ${link.guardValue}</title></path>`;
+        }).join("");
+      const guardLabels = state.graph.links
+        .filter(linkVisible)
+        .filter(link => Number(link.guardValue || 0) > 0)
+        .filter(link => shouldShowGuardLabel(link))
+        .map(link => {
+          const point = edgeLabelPoint(link);
+          const cls = selectedId && !isLinkRelatedToSelection(link) && selectedId !== link.id ? "guard-label muted" : "guard-label";
+          return `<text class="${cls}" x="${point.x}" y="${point.y}">${guardLabel(link.guardValue)}</text>`;
+        }).join("");
+      const nodes = state.graph.zones
+        .filter(nodeVisible)
+        .map(zone => {
+          const radius = zone.radius;
+          const player = PLAYER_COLORS[zone.player];
+          const color = player ? player.color : roleColor(zone.role);
+          const circleClass = color === "var(--city)" || color === "#f8fafc" ? "light-node" : "";
+          const cls = [
+            "node",
+            selectedId === zone.id ? "selected" : ""
+          ].filter(Boolean).join(" ");
+          const badge = player ? `<circle class="player-dot" cx="${radius * 0.48}" cy="${-radius * 0.48}" r="9" fill="rgba(255,255,255,0.96)">
+              <title>${escapeHtml(zone.player)} ${escapeHtml(player.name)}</title>
+            </circle>
+            <text class="player-label" x="${radius * 0.48}" y="${-radius * 0.48 + 3}" fill="${player.color}">${escapeHtml(player.label)}</text>` : "";
+          const castle = zone.role === "city" ? `<text class="castle-marker" y="${-radius * 0.38}">♜</text>` : "";
+          return `<g class="${cls}" data-zone="${escapeAttr(zone.id)}" transform="translate(${zone.x} ${zone.y})">
+            <circle class="${circleClass}" r="${radius}" fill="${color}"><title>${escapeHtml(zone.id)} ${zone.role}</title></circle>
+            ${castle}
+            ${badge}
+            <text y="4">${escapeHtml(zone.label)}</text>
+          </g>`;
+        }).join("");
+      els.graphWrap.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Template graph">
+        <g>${edges}</g>
+        <g>${guardLabels}</g>
+        <g>${nodes}</g>
+      </svg>`;
+      els.graphWrap.querySelector("svg").addEventListener("click", event => {
+        if (event.target.tagName.toLowerCase() === "svg") clearSelection();
+      });
+      els.graphWrap.querySelectorAll("[data-zone]").forEach(node => {
+        node.addEventListener("click", () => selectZone(node.dataset.zone));
+      });
+      els.graphWrap.querySelectorAll("[data-link]").forEach(edge => {
+        edge.addEventListener("click", () => selectConnection(edge.dataset.link));
+      });
+    }
+
+    function edgeModeMatches(link) {
+      if (state.edgeMode === "roads") return link.road === true;
+      if (state.edgeMode === "noroad") return link.road === false;
+      if (state.edgeMode === "guarded") return link.guardValue > 0;
+      if (state.edgeMode === "direct") return link.type === "Direct";
+      if (state.edgeMode === "selected") return isLinkRelatedToSelection(link);
+      return true;
+    }
+
+    function shouldShowGuardLabel(link) {
+      if (state.edgeMode !== "all") return true;
+      if (!state.selected) return false;
+      return state.selected.id === link.id || isLinkRelatedToSelection(link);
+    }
+
+    function isLinkRelatedToSelection(link) {
+      if (!state.selected) return state.edgeMode !== "selected";
+      if (state.selected.type === "connection") return state.selected.id === link.id;
+      return link.from.id === state.selected.id || link.to.id === state.selected.id;
+    }
+
+    function edgePath(link) {
+      const x1 = link.from.x;
+      const y1 = link.from.y;
+      const x2 = link.to.x;
+      const y2 = link.to.y;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const normalX = -dy / dist;
+      const normalY = dx / dist;
+      const offset = ((hashString(link.id) % 9) - 4) * 7;
+      const cx = (x1 + x2) / 2 + normalX * offset;
+      const cy = (y1 + y2) / 2 + normalY * offset;
+      return `M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+    }
+
+    function edgeLabelPoint(link) {
+      const x1 = link.from.x;
+      const y1 = link.from.y;
+      const x2 = link.to.x;
+      const y2 = link.to.y;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const normalX = -dy / dist;
+      const normalY = dx / dist;
+      const offset = ((hashString(link.id) % 9) - 4) * 7;
+      return {
+        x: ((x1 + x2) / 2 + normalX * offset).toFixed(1),
+        y: ((y1 + y2) / 2 + normalY * offset - 4).toFixed(1)
+      };
+    }
+
+    function guardLabel(value) {
+      const n = Number(value || 0);
+      if (!Number.isFinite(n) || n <= 0) return "";
+      return `${Math.round(n / 1000)}k`;
+    }
+
+    function renderDetails() {
+      if (!state.graph || !state.selected) {
+        els.details.innerHTML = `<div class="empty">Select a zone or connection.</div>`;
+        return;
+      }
+      if (state.selected.type === "zone") {
+        const zone = state.selected.item.raw;
+        const main = (zone.mainObjects || []).map(obj => obj.type).join(", ") || "-";
+        const player = playerHtml(state.selected.item.player);
+        els.details.innerHTML = `<h2>${escapeHtml(zone.name)}</h2>
+          <dl class="kv">
+            <dt>Role</dt><dd>${escapeHtml(state.selected.item.role)}</dd>
+            <dt>Player</dt><dd>${player}</dd>
+            <dt>Size</dt><dd>${escapeHtml(String(zone.size ?? "-"))}</dd>
+            <dt>Layout</dt><dd>${escapeHtml(zone.layout || "-")}</dd>
+            <dt>Main objects</dt><dd>${escapeHtml(main)}</dd>
+            <dt>Mandatory</dt><dd>${escapeHtml((zone.mandatoryContent || []).join(", ") || "-")}</dd>
+            <dt>Guarded pool</dt><dd>${escapeHtml((zone.guardedContentPool || []).join(", ") || "-")}</dd>
+            <dt>Unguarded pool</dt><dd>${escapeHtml((zone.unguardedContentPool || []).join(", ") || "-")}</dd>
+            <dt>Resources pool</dt><dd>${escapeHtml((zone.resourcesContentPool || []).join(", ") || "-")}</dd>
+            <dt>Guarded value</dt><dd>${num(zone.guardedContentValue)} + ${num(zone.guardedContentValuePerArea)}/area</dd>
+            <dt>Unguarded value</dt><dd>${num(zone.unguardedContentValue)} + ${num(zone.unguardedContentValuePerArea)}/area</dd>
+            <dt>Resources value</dt><dd>${num(zone.resourcesValue)} + ${num(zone.resourcesValuePerArea)}/area</dd>
+          </dl>`;
+      } else {
+        const conn = state.selected.item.raw;
+        els.details.innerHTML = `<h2>${escapeHtml(conn.name || `${conn.from} -> ${conn.to}`)}</h2>
+          <dl class="kv">
+            <dt>From</dt><dd>${escapeHtml(conn.from || "-")}</dd>
+            <dt>To</dt><dd>${escapeHtml(conn.to || "-")}</dd>
+            <dt>Type</dt><dd>${escapeHtml(conn.connectionType || "-")}</dd>
+            <dt>Road</dt><dd>${escapeHtml(String(conn.road ?? "auto"))}</dd>
+            <dt>Guard value</dt><dd>${num(conn.guardValue)}</dd>
+            <dt>Guard zone</dt><dd>${escapeHtml(conn.guardZone || "-")}</dd>
+            <dt>Guard escape</dt><dd>${escapeHtml(String(conn.guardEscape ?? "-"))}</dd>
+            <dt>Sim turns</dt><dd>${escapeHtml(String(conn.simTurnSquad ?? false))}</dd>
+          </dl>`;
+      }
+    }
+
+    function renderTable() {
+      if (!state.graph) {
+        els.tableWrap.innerHTML = `<div class="empty">No data loaded.</div>`;
+        return;
+      }
+      const q = state.search;
+      if (state.table === "zones") {
+        const rows = state.graph.zones
+          .filter(zone => !q || JSON.stringify(zone.raw).toLowerCase().includes(q))
+          .map(zone => {
+            const z = zone.raw;
+            const main = (z.mainObjects || []).map(obj => obj.type).join(", ");
+            return `<tr data-zone="${escapeAttr(zone.id)}">
+              <td>${escapeHtml(z.name)}</td>
+              <td><span class="pill">${escapeHtml(zone.role)}</span></td>
+              <td>${playerHtml(zone.player)}</td>
+              <td>${escapeHtml(String(z.size ?? ""))}</td>
+              <td>${escapeHtml(main)}</td>
+              <td>${num(z.guardedContentValue)}</td>
+              <td>${num(z.unguardedContentValue)}</td>
+              <td>${num(z.resourcesValue)}</td>
+              <td>${escapeHtml((z.mandatoryContent || []).join(", "))}</td>
+            </tr>`;
+          }).join("");
+        els.tableWrap.innerHTML = `<table>
+          <thead><tr><th>Zone</th><th>Role</th><th>Player</th><th>Size</th><th>Main</th><th>Guarded</th><th>Free</th><th>Resources</th><th>Mandatory</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+        els.tableWrap.querySelectorAll("[data-zone]").forEach(row => {
+          row.addEventListener("click", () => selectZone(row.dataset.zone));
+        });
+      } else {
+        const rows = state.graph.links
+          .filter(link => !q || JSON.stringify(link.raw).toLowerCase().includes(q))
+          .map(link => {
+            const c = link.raw;
+            return `<tr data-link="${escapeAttr(link.id)}">
+              <td>${escapeHtml(c.name || link.id)}</td>
+              <td>${escapeHtml(c.from || "")}</td>
+              <td>${escapeHtml(c.to || "")}</td>
+              <td>${escapeHtml(c.connectionType || "")}</td>
+              <td>${escapeHtml(String(c.road ?? "auto"))}</td>
+              <td>${num(c.guardValue)}</td>
+              <td>${escapeHtml(c.guardZone || "-")}</td>
+            </tr>`;
+          }).join("");
+        els.tableWrap.innerHTML = `<table>
+          <thead><tr><th>Name</th><th>From</th><th>To</th><th>Type</th><th>Road</th><th>Guard</th><th>Guard zone</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+        els.tableWrap.querySelectorAll("[data-link]").forEach(row => {
+          row.addEventListener("click", () => selectConnection(row.dataset.link));
+        });
+      }
+    }
+
+    function selectZone(id) {
+      const item = state.graph.zones.find(zone => zone.id === id);
+      state.selected = item ? { type: "zone", id, item } : null;
+      renderGraph();
+      renderDetails();
+    }
+
+    function selectConnection(id) {
+      const item = state.graph.links.find(link => link.id === id);
+      state.selected = item ? { type: "connection", id, item } : null;
+      renderGraph();
+      renderDetails();
+    }
+
+    function clearSelection() {
+      state.selected = null;
+      renderGraph();
+      renderDetails();
+    }
+
+    function roleColor(role) {
+      return {
+        spawn: "var(--spawn)",
+        city: "var(--city)",
+        gold: "var(--gold)",
+        connector: "var(--connector)",
+        other: "#f8fafc"
+      }[role] || "var(--connector)";
+    }
+
+    function playerHtml(playerId) {
+      if (!playerId) return "-";
+      const player = PLAYER_COLORS[playerId] || { name: playerId, color: "#64748b", label: "?" };
+      return `<span class="player-pill"><i class="player-chip" style="background:${escapeAttr(player.color)}"></i>${escapeHtml(playerId)} ${escapeHtml(player.name)}</span>`;
+    }
+
+    function shortZoneName(name) {
+      const match = String(name).match(/(\d+)$/);
+      return match ? match[1] : String(name).replace(/^Zone[-_ ]?/i, "").slice(0, 8);
+    }
+
+    function num(value) {
+      if (value === undefined || value === null || value === "") return "-";
+      const n = Number(value);
+      return Number.isFinite(n) ? n.toLocaleString("en-US") : escapeHtml(String(value));
+    }
+
+    function hashString(value) {
+      let hash = 0;
+      for (const char of String(value)) {
+        hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replaceAll("`", "&#096;");
+    }
+  </script>
+</body>
+</html>
